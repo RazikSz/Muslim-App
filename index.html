@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown Imsak dan Maghrib</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@1.14.0/dist/full.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #afbdd4 100%);
+        }
+
+        .acrylic {
+            backdrop-filter: blur(10px);
+            background: rgba(19, 19, 19, 0.607);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-button {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 5px;
+        }
+
+        .red { background-color: #ff605c; }
+        .yellow { background-color: #ffbd44; }
+        .green { background-color: #00ca4e; }
+
+        .hidden {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center h-screen">
+
+        <!-- Initial Input Panel for Name and City -->
+        <div id="input-panel" class="acrylic w-96 mb-4 fade-in">
+            <!-- Landing Page -->
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex">
+                    <div class="nav-button
+                    red"></div>
+                    <div class="nav-button yellow"></div>
+                    <div class="nav-button green"></div>
+                </div>
+                <h2 class="text-xl font-bold">Muslim App by RAZIEK SZ</h2>
+            </div>
+            
+            <div class="form-control">
+                <label for="user-name-input" class="block font-bold mb-2">Masukkan Nama</label>
+                <input type="text" id="user-name-input" placeholder="Masukkan nama Anda" class="input input-bordered mb-4">
+                <label for="search-city" class="block font-bold mb-2">Masukkan Nama Kota</label>
+                <input type="text" id="search-city" placeholder="Masukkan nama kota" class="input input-bordered" oninput="filterCities()">
+                <ul id="city-list" class="dropdown-content bg-gray-600 border border-gray-300 rounded mt-2 hidden"></ul>
+                <button class="btn btn-primary mt-4" onclick="submitUserInfo()">Submit</button>
+            </div>
+        </div>
+
+        <div id="greetings-panel" class="acrylic w-96 mb-4 hidden fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex">
+                    <div class="nav-button red"></div>
+                    <div class="nav-button yellow"></div>
+                    <div class="nav-button green"></div>
+                </div>
+                <h2 class="text-xl font-bold">Muslim App by KOU</h2>
+            </div>
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold">Assalamualaikum, <span id="user-name">User </span></h2>
+            </div>
+            <div id="hijri-date" class="mb-2"></div>
+            <div class="flex items-center mb-2">
+                <i class="fas fa-map-marker-alt mr-2"></i>
+                <span id="user-city">Kota</span>
+            </div>
+        </div>
+
+        <!-- Countdown Berbuka Puasa -->
+        <div class="acrylic w-96 mb-4 hidden fade-in" id="berbuka-message">
+            <h3 class="text-lg font-bold">Countdown Berbuka Puasa</h3>
+            <div id="countdown" class="text-2xl font-bold mt-4"></div>
+        </div>
+
+        <div class="acrylic w-96 mb-4 hidden fade-in" id="countdown-panel">
+            <h3 class="text-lg font-bold">Jadwal Sholat</h3>
+            <div class="mt-4">
+                <p>Imsak: <span id="imsak-time"></span></p>
+                <p>Subuh: <span id="subuh-time"></span></p>
+                <p>Dhuha: <span id="dhuha-time"></span></p>
+                <p>Dzuhur: <span id="dzuhur-time"></span></p>
+                <p>Ashar: <span id="ashar-time"></span></p>
+                <p>Maghrib: <span id="maghrib-time"></span></p>
+                <p>Isya: <span id="isya-time"></span></p>
+            </div>
+            <h3 class="text-lg font-bold mt-4">Countdown Waktu Sholat Selanjutnya</h3>
+            <div id="countdown-sholat" class="text-2xl font-bold mt-2"></div>
+        </div>
+
+
+    <audio id="adhan" src="sheikh_abdul_karim_omar_fatani_al_makki_adzan.mp3" preload="auto"></audio>
+
+    <script>
+        let cities = [];
+        let selectedCityId = null;
+
+        async function fetchCities() {
+            const response = await fetch('https://api.myquran.com/v2/sholat/kota/semua');
+            const data = await response.json();
+            if (data.status) {
+                cities = data.data;
+            }
+        }
+
+        function filterCities() {
+            const input = document.getElementById('search-city').value.toLowerCase();
+            const cityList = document.getElementById('city-list');
+            cityList.innerHTML = '';
+            const filteredCities = cities.filter(city => city.lokasi.toLowerCase().includes(input));
+
+            if (filteredCities.length > 0) {
+                cityList.classList.remove('hidden');
+                filteredCities.forEach(city => {
+                    const li = document.createElement('li');
+                    li.className = 'p-2 hover:bg-gray-200 cursor-pointer';
+                    li.innerText = city.lokasi;
+                    li.onclick = () => selectCity(city.id, city.lokasi);
+                    cityList.appendChild(li);
+                });
+            } else {
+                cityList.classList.add('hidden');
+            }
+        }
+
+        function selectCity(id, name) {
+            selectedCityId = id;
+            document.getElementById('search-city').value = name;
+            document.getElementById('city-list').classList.add('hidden');
+            getJadwal();
+            getHijriDate();
+        }
+
+        function submitUserInfo() {
+            const userName = document.getElementById('user-name-input').value;
+            const userCity = document.getElementById('search-city').value;
+
+            if (userName && userCity) {
+                document.getElementById('user-name').innerText = userName;
+                document.getElementById('user-city').innerText = userCity;
+                document.getElementById('input-panel').classList.add('hidden');
+                document.getElementById('greetings-panel').classList.remove('hidden');
+                document.getElementById('countdown-panel').classList.remove('hidden');
+                document.getElementById('berbuka-message').classList.remove('hidden');
+                getHijriDate();
+                fetchCities();
+            }
+        }
+
+        async function getJadwal() {
+            if (!selectedCityId) return;
+
+            const today = new Date().toISOString().split('T')[0];
+            const response = await fetch(`https://api.myquran.com/v2/sholat/jadwal/${selectedCityId}/${today}`);
+            const data = await response.json();
+            if (data.status) {
+                const jadwal = data.data.jadwal;
+                document.getElementById('imsak-time').innerText = jadwal.imsak;
+                document.getElementById('subuh-time').innerText = jadwal.subuh;
+                document.getElementById('dhuha-time').innerText = jadwal.dhuha;
+                document.getElementById('dzuhur-time').innerText = jadwal.dzuhur;
+                document.getElementById('ashar-time').innerText = jadwal.ashar;
+                document.getElementById('maghrib-time').innerText = jadwal.maghrib;
+                document.getElementById('isya-time').innerText = jadwal.isya;
+                startCountdown(jadwal.imsak, jadwal.maghrib);
+                startCountdownSholat(jadwal);
+            }
+        }
+
+        async function getHijriDate() {
+            const response = await fetch('https://api.myquran.com/v2/cal/hijr/?adj=-1');
+            const data = await response.json();
+            if (data.status) {
+                const hijriDate = data.data.date.join(', ');
+                document.getElementById('hijri-date').innerText = hijriDate;
+            }
+        }
+
+        function startCountdown(imsak, maghrib) {
+            const imsakTime = new Date();
+            const maghribTime = new Date();
+            const [imsakHour, imsakMinute] = imsak.split(':');
+            const [maghribHour, maghribMinute] = maghrib.split(':');
+            imsakTime.setHours(imsakHour, imsakMinute, 0);
+            maghribTime.setHours(maghribHour, maghribMinute, 0);
+
+            setInterval(() => {
+                const now = new Date();
+                let countdownText = '';
+
+                if (now < imsakTime) {
+                    const diff = imsakTime - now;
+                    countdownText = `Waktu Imsak: ${formatTime(diff)}`;
+                } else if (now < maghribTime) {
+                    const diff = maghribTime - now;
+                    countdownText = `Waktu Maghrib: ${formatTime (diff)}`;
+                    if (diff <= 0) {
+                        document.getElementById('adhan').play();
+                        document.getElementById('berbuka-message').innerText = "Selamat Berbuka Puasa";
+                        document.getElementById('berbuka-message').classList.remove('hidden');
+                    }
+                } else {
+                    countdownText = 'Waktu Puasa Selesai';
+                }
+
+                document.getElementById('countdown').innerText = countdownText;
+            }, 1000);
+        }
+
+        function startCountdownSholat(jadwal) {
+            const sholatTimes = [
+                { name: 'Subuh', time: jadwal.subuh },
+                { name: 'Dzuhur', time: jadwal.dzuhur },
+                { name: 'Ashar', time: jadwal.ashar },
+                { name: 'Maghrib', time: jadwal.maghrib },
+                { name: 'Isya', time: jadwal.isya }
+            ];
+        
+            function getNextSholat() {
+                const now = new Date();
+                
+                // Cari sholat berikutnya yang belum lewat
+                for (const sholat of sholatTimes) {
+                    const [hours, minutes] = sholat.time.split(':').map(Number);
+                    const sholatTime = new Date();
+                    sholatTime.setHours(hours, minutes, 0, 0);
+                    
+                    if (sholatTime > now) {
+                        return { sholat, time: sholatTime };
+                    }
+                }
+                
+                // Jika semua sudah lewat, ambil sholat pertama di hari berikutnya
+                const firstSholatTomorrow = new Date();
+                const [firstHours, firstMinutes] = sholatTimes[0].time.split(':').map(Number);
+                firstSholatTomorrow.setHours(firstHours, firstMinutes, 0, 0);
+                firstSholatTomorrow.setDate(firstSholatTomorrow.getDate() + 1);
+                return { sholat: sholatTimes[0], time: firstSholatTomorrow };
+            }
+        
+            function formatTime(ms) {
+                const totalSeconds = Math.floor(ms / 1000);
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                return `${hours} jam ${minutes} menit ${seconds} detik`;
+            }
+        
+            function updateCountdown() {
+                const now = new Date();
+                const { sholat, time: nextTime } = getNextSholat();
+                const diff = nextTime - now;
+        
+                if (diff > 0) {
+                    document.getElementById('countdown-sholat').innerText = 
+                        `Sholat ${sholat.name} dalam: ${formatTime(diff)}`;
+                } else if (diff <= 0 && diff > -900000) { // 15 menit pertama
+                    document.getElementById('countdown-sholat').innerText = 
+                        `Sholat ${sholat.name} sudah dimulai!`;
+                } else {
+                    // Jika sudah lewat 15 menit, ambil sholat berikutnya
+                    const nextSholat = getNextSholat();
+                    document.getElementById('countdown-sholat').innerText = 
+                        `Sholat ${nextSholat.sholat.name} dalam: ${formatTime(nextSholat.time - now)}`;
+                }
+            }
+        
+            // Memanggil updateCountdown setiap detik
+            setInterval(updateCountdown, 1000);
+            updateCountdown();
+        }
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${hours} jam ${minutes} menit ${seconds} detik`;
+        }
+
+        fetchCities();
+    </script>
+</body>
+</html>
